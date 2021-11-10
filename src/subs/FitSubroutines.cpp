@@ -436,7 +436,7 @@ vector<unique_ptr<Instrument>> readInstruments(vector<int>& instrumentHDUs,
 }
 
 // Read the Exposure table into an array.
-vector<Exposure*>
+vector<unique_ptr<Exposure>>
 readExposures(const vector<unique_ptr<Instrument>>& instruments,
 	      const vector<double>& fieldEpochs,
 	      vector<int>& exposureColorPriorities,
@@ -600,7 +600,7 @@ readExposures(const vector<unique_ptr<Instrument>>& instruments,
   }
 
   // Initialize our output arrays to not-in-use values
-  vector<Exposure*> exposures(names.size(), nullptr);
+  vector<unique_ptr<Exposure>> exposures(names.size());
   exposureColorPriorities = vector<int>(names.size(), -1);
   for (int i=0; i<names.size(); i++) {
     spaceReplace(names[i]);
@@ -633,12 +633,12 @@ readExposures(const vector<unique_ptr<Instrument>>& instruments,
       // The projection we will use for this exposure:
       astrometry::Gnomonic gn(astrometry::Orientation(astrometry::SphericalICRS(ra[i]*WCS_UNIT,
 										dec[i]*WCS_UNIT)));
-      auto expo = new Exposure(names[i],gn);
+      unique_ptr<Exposure> expo(new Exposure(names[i],gn));
       expo->field = fieldNumber[i];
       expo->instrument = instrumentNumber[i];
       expo->airmass = airmass[i];
       expo->exptime = exptime[i];
-      exposures[i] = expo;
+      exposures[i] = std::move(expo);
       if (!mjd.empty()) {
 	expo->mjd = mjd[i];
 	// Also calculate time in years after field's reference epoch
@@ -700,7 +700,7 @@ template <class S>
 vector<typename S::Extension*>
 readExtensions(img::FTable& extensionTable,
 	       const vector<unique_ptr<Instrument>>& instruments,
-	       const vector<Exposure*>& exposures,
+	       const vector<unique_ptr<Exposure>>& exposures,
 	       const vector<int>& exposureColorPriorities,
 	       vector<typename S::ColorExtension*>& colorExtensions,
 	       astrometry::YAMLCollector& inputYAML,
@@ -829,7 +829,7 @@ template <class S>
 int
 findCanonical(Instrument& instr,
 	      int iInst,
-	      vector<Exposure*>& exposures,
+	      vector<unique_ptr<Exposure>>& exposures,
 	      vector<typename S::Extension*>& extensions,
 	      typename S::Collection& pmc)
 {
@@ -984,7 +984,7 @@ findCanonical(Instrument& instr,
 template <class S>
 void
 createMapCollection(const vector<unique_ptr<Instrument>>& instruments,
-		    const vector<Exposure*>& exposures,
+		    const vector<unique_ptr<Exposure>>& exposures,
 		    const vector<typename S::Extension*> extensions,
 		    astrometry::YAMLCollector& inputYAML,
 		    typename S::Collection& pmc) {
@@ -1442,7 +1442,7 @@ Photo::fillDetection(Photo::Detection* d,
 // and place into Detection structures.
 template <class S>
 void readObjects(const img::FTable& extensionTable,
-		 const vector<Exposure*>& exposures,
+		 const vector<unique_ptr<Exposure>>& exposures,
 		 const vector<typename S::Extension*>& extensions,
 		 const vector<unique_ptr<astrometry::SphericalCoords>>& fieldProjections,
 		 bool logging) {
@@ -1658,7 +1658,7 @@ void readObjects(const img::FTable& extensionTable,
 // and place into Detection structures.
 template <class S>
 void readObjects_oneExtension(
-      const vector<Exposure*>& exposures,
+      const vector<unique_ptr<Exposure>>& exposures,
       int iext, img::FTable ff,
       string xKey, string yKey, string idKey, string pmCovKey, vector<string> xyErrKeys,
       string magKey, int magKeyElement, string magErrKey, int magErrKeyElement, // TODO: make these dictionary?
@@ -1852,7 +1852,7 @@ template <class S>
 void
 purgeNoisyDetections(double maxError,
 		     typename S::MCat& matches,
-		     const vector<Exposure*>& exposures,
+		     const vector<unique_ptr<Exposure>>& exposures,
 		     const vector<typename S::Extension*>& extensions) {
   cerr << "Check maxError: " << maxError << endl;
   int eraseCount = 0;
@@ -1939,7 +1939,7 @@ template <class S>
 map<string, long>
 findUnderpopulatedExposures(long minFitExposure,
 			    const typename S::MCat& matches,
-			    const vector<Exposure*> exposures,
+			    const vector<unique_ptr<Exposure>> & exposures,
 			    const vector<typename S::Extension*> extensions,
 			    const typename S::Collection& pmc) {
   // First count up useful Detections in each extension:
@@ -2676,7 +2676,7 @@ Astro::saveResults(const astrometry::MCat& matches,
 
 void
 Photo::reportStatistics(const list<typename Photo::Match*>& matches,
-			const vector<Exposure*>& exposures,
+			const vector<unique_ptr<Exposure>>& exposures,
 			const vector<typename Photo::Extension*>& extensions,
 			ostream& os) {
   // Create Accum instances for fitted and reserved Detections on every
@@ -2698,7 +2698,7 @@ Photo::reportStatistics(const list<typename Photo::Match*>& matches,
     for (auto dptr : *mptr) {
       // Accumulate statistics for meaningful residuals
       int exposureNumber = extensions[dptr->catalogNumber]->exposure;
-      Exposure* expo = exposures[exposureNumber];
+      Exposure* expo = exposures[exposureNumber].get();
       if (mptr->getReserved()) {
 	if (expo->instrument==REF_INSTRUMENT ||
 	    expo->instrument==PM_INSTRUMENT) {
@@ -2762,7 +2762,7 @@ Photo::reportStatistics(const list<typename Photo::Match*>& matches,
 
 void
 Astro::reportStatistics(const list<typename Astro::Match*>& matches,
-			const vector<Exposure*>& exposures,
+			const vector<unique_ptr<Exposure>>& exposures,
 			const vector<typename Astro::Extension*>& extensions,
 			ostream& os) {
   // Create Accum instances for fitted and reserved Detections on every
@@ -2786,7 +2786,7 @@ Astro::reportStatistics(const list<typename Astro::Match*>& matches,
     for (auto dptr : *mptr) {
       // Accumulate statistics for meaningful residuals
       int exposureNumber = extensions[dptr->catalogNumber]->exposure;
-      Exposure* expo = exposures[exposureNumber];
+      Exposure* expo = exposures[exposureNumber].get();
       if (mptr->getReserved()) {
 	if (expo->instrument==REF_INSTRUMENT ||
 	    expo->instrument==PM_INSTRUMENT) {
@@ -2862,7 +2862,7 @@ template \
 vector<AP::Extension*> \
 readExtensions<AP> (img::FTable& extensionTable, \
 		    const vector<unique_ptr<Instrument>>& instruments,	\
-		    const vector<Exposure*>& exposures,		\
+		    const vector<unique_ptr<Exposure>>& exposures,		\
 		    const vector<int>& exposureColorPriorities,	\
 		    vector<AP::ColorExtension*>& colorExtensions,\
 		    astrometry::YAMLCollector& inputYAML,        \
@@ -2870,7 +2870,7 @@ readExtensions<AP> (img::FTable& extensionTable, \
 template int \
 findCanonical<AP>(Instrument& instr,	\
 		  int iInst,			\
-		  vector<Exposure*>& exposures,	  \
+		  vector<unique_ptr<Exposure>>& exposures,	  \
 		  vector<AP::Extension*>& extensions,	\
 		  AP::Collection& pmc); \
 template void \
@@ -2879,7 +2879,7 @@ fixMapComponents<AP>(AP::Collection&, \
 		     const vector<unique_ptr<Instrument>>&); \
 template void \
 createMapCollection<AP>(const vector<unique_ptr<Instrument>>& instruments, \
-			const vector<Exposure*>& exposures, \
+			const vector<unique_ptr<Exposure>>& exposures, \
 			const vector<AP::Extension*> extensions, \
 			astrometry::YAMLCollector& inputYAML,	 \
 			AP::Collection& pmc); \
@@ -2887,12 +2887,12 @@ template void							\
 whoNeedsColor<AP>(vector<AP::Extension*> extensions); \
 template void \
 readObjects<AP>(const img::FTable& extensionTable, \
-		const vector<Exposure*>& exposures, \
+		const vector<unique_ptr<Exposure>>& exposures, \
 		const vector<typename AP::Extension*>& extensions, \
 		const vector<unique_ptr<astrometry::SphericalCoords>>& fieldProjections, \
                 bool logging);	      \
 template void \
-readObjects_oneExtension<AP>(const vector<Exposure*>& exposures, \
+readObjects_oneExtension<AP>(const vector<unique_ptr<Exposure>>& exposures, \
     int iext, img::FTable ff,\
     string xKey, string yKey, string idKey, string pmCovKey,  \
     vector<string> xyErrKeys, \
@@ -2917,7 +2917,7 @@ readColors<AP>(img::FTable extensionTable, \
 template void  \
 purgeNoisyDetections<AP>(double maxError,  \
 			 AP::MCat& matches,	\
-			 const vector<Exposure*>& exposures,  \
+			 const vector<unique_ptr<Exposure>>& exposures,  \
 			 const vector<AP::Extension*>& extensions);  \
 template void  \
 purgeSparseMatches<AP>(int minMatches,  \
@@ -2934,7 +2934,7 @@ reserveMatches<AP>(AP::MCat& matches,  \
 template map<string, long>  \
 findUnderpopulatedExposures<AP> (long minFitExposure,  \
 				 const AP::MCat& matches,  \
-				 const vector<Exposure*> exposures,  \
+				 const vector<unique_ptr<Exposure>> & exposures,  \
 				 const vector<AP::Extension*> extensions,  \
 				 const AP::Collection& pmc);  \
 template void  \

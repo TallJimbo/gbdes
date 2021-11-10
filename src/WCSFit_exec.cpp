@@ -274,7 +274,7 @@ main(int argc, char *argv[])
   // -1 means an exposure that does not hold color info.
   vector<int> exposureColorPriorities;
   //fitclass.exposures = readExposures(fitclass.instruments,
-  vector<Exposure*> exposures = readExposures(fitclass.instruments,
+  vector<unique_ptr<Exposure>> exposures = readExposures(fitclass.instruments,
                                      fitclass.fieldEpochs,
                                      exposureColorPriorities,
                                      useColorList,
@@ -311,7 +311,7 @@ main(int argc, char *argv[])
   }
   */
   
-  fitclass.setExposures(exposures, sysError, referenceSysError);
+  fitclass.setExposures(std::move(exposures), sysError, referenceSysError);
 
   cerr << "check 3 exec" << endl;
   
@@ -778,7 +778,7 @@ continue;
     // -1 means an exposure that does not hold color info.
     vector<int> exposureColorPriorities;
     // Read in the table of exposures
-    vector<Exposure*> exposures =
+    vector<unique_ptr<Exposure>> exposures =
       readExposures(fitclass.instruments,
 		    fitclass.fieldEpochs,
 		    exposureColorPriorities,

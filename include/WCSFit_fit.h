@@ -80,8 +80,7 @@ class FitClass {
     vector<unique_ptr<Instrument>> instruments;
     
     // The table of exposures
-    vector<Exposure*> exposures;
-    vector<shared_ptr<Exposure>> SPexposures;
+    vector<unique_ptr<Exposure>> exposures;
     
     // Extension tables:
     vector<ColorExtension*> colorExtensions;
@@ -103,8 +102,7 @@ class FitClass {
     //set<string> degenerateTypes; //={"Poly","Linear","Constant"};
     //void addInputYAML(string inputMaps);
 
-    void setExposures(vector<shared_ptr<Exposure>> expos, double sysErr, double refSysErr);
-    void setExposures(vector<Exposure*> expos, double sysErr, double refSysErr);
+    void setExposures(vector<unique_ptr<Exposure>> expos, double sysErr, double refSysErr);
     
     void setExtensions(vector<shared_ptr<Extension>> extens);
 

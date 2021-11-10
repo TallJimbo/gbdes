@@ -49,26 +49,14 @@ FitClass::FitClass() {
   }
 }*/
 
-void FitClass::setExposures(vector<shared_ptr<Exposure>> expos, double sysErr, double refSysErr) {
-
-  SPexposures = expos;
-  //exposures.reserve(SPexposures.size());
-  vector<Exposure*> tmp_expos;
-  for (auto e : SPexposures) {
-    //exposures.push_back(e.get());
-    tmp_expos.push_back(e.get());
-  }
-  setExposures(tmp_expos, sysErr, refSysErr);
-}
-
-void FitClass::setExposures(vector<Exposure*> expos, double sysErr, double refSysErr) {
+void FitClass::setExposures(vector<unique_ptr<Exposure>> expos, double sysErr, double refSysErr) {
 
   /*SPexposures = expos;
   exposures.reserve(SPexposures.size());
   for (auto e : SPexposures) {
     exposures.push_back(e.get());
   }*/
-  exposures = expos;
+  exposures = std::move(expos);
 
   // Convert error parameters from I/O units to internal
   float referenceSysError = refSysErr * RESIDUAL_UNIT/WCS_UNIT;
@@ -80,7 +68,7 @@ void FitClass::setExposures(vector<Exposure*> expos, double sysErr, double refSy
     Matrix22 astrometricCovariance(0.);
     astrometricCovariance(0,0) = sysError*sysError;
     astrometricCovariance(1,1) = sysError*sysError;
-    for (auto e : exposures) {
+    for (auto const & e : exposures) {
       if (e && e->instrument >= 0) {
       e->astrometricCovariance += astrometricCovariance;
       cerr << "add to e" << endl;
@@ -92,7 +80,7 @@ void FitClass::setExposures(vector<Exposure*> expos, double sysErr, double refSy
     Matrix22 astrometricCovariance(0.);
     astrometricCovariance(0,0) = referenceSysError*referenceSysError;
     astrometricCovariance(1,1) = referenceSysError*referenceSysError;
-    for (auto e : exposures) {
+    for (auto const & e : exposures) {
       if (e && (e->instrument == REF_INSTRUMENT || e->instrument== PM_INSTRUMENT))
         e->astrometricCovariance += astrometricCovariance;
       // Note that code in FitSubroutines::makePMDetection() will
@@ -269,7 +257,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
       // All exposure maps are candidates for setting to Identity
       // (the code will ignore those which already are Identity)
       set<string> exposureMapNames;
-      for (auto expoPtr : exposures) {
+      for (auto const & expoPtr : exposures) {
         if (expoPtr && !expoPtr->name.empty())
             exposureMapNames.insert(expoPtr->name);
       }
