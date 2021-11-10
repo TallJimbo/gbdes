@@ -4,12 +4,12 @@ from glob import glob
 from setuptools import setup
 
 yaml_path = os.path.join(os.environ['YAML_DIR'], 'include')
-eigen_path = '/software/lsstsw/stack_20210813/stack/miniconda3-py38_4.9.2-0.7.0/Linux64/eigen/3.3.7.lsst2-1-g398bedf/include/'
+eigen_path = os.environ['EIGEN_DIR']
 fftw_path = os.path.join(os.environ['FFTW_DIR'], 'include/')
 cfitsio_path = os.path.join(os.environ['CFITSIO_DIR'], 'include/')
 include_dirs = [yaml_path, fftw_path, eigen_path, cfitsio_path,
                                     'include',
-                                    '../gb_packages/gbfits'] + glob('../gb_packages/*/include')
+                                    '../gbfits'] + glob('../*/include')
 
 ext_modules = [
     Pybind11Extension("wcsfit",
