@@ -767,7 +767,7 @@ continue;
 
     // Read in all the instrument extensions and their device info from input
     // FITS file, save useful ones and write to output FITS file.
-    vector<Instrument*> instruments =
+    vector<unique_ptr<Instrument>> instruments =
       readInstruments(instrumentHDUs, useInstrumentList, inputTables, outCatalog,
 		      outputCatalogAlreadyOpen);
     

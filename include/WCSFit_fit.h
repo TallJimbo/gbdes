@@ -77,7 +77,7 @@ class FitClass {
     vector<SphericalCoords*> fieldProjections;
     vector<double> fieldEpochs;
     
-    vector<Instrument*> instruments;
+    vector<unique_ptr<Instrument>> instruments;
     
     // The table of exposures
     vector<Exposure*> exposures;

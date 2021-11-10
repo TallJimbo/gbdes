@@ -19,7 +19,7 @@ FitClass::FitClass() {
     fieldNames = {};
     fieldProjections = vector<SphericalCoords*>(0);
     fieldEpochs = vector<double>(0);
-    instruments = vector<Instrument*>(0);
+    instruments = vector<unique_ptr<Instrument>>(0);
     
     /*cerr << "setup inputYAML" << endl;
     YAMLCollector inputYAML(inputMaps, PixelMapCollection::magicKey);
@@ -780,7 +780,4 @@ void FitClass::cleanup() {
   // Get rid of exposures
   //for (int i=0; i<exposures.size(); i++)
   //  if (exposures[i]) delete exposures[i];
-  // Get rid of instruments
-  for (int i=0; i<instruments.size(); i++)
-    if (instruments[i]) delete instruments[i];
 }
