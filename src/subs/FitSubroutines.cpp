@@ -1055,8 +1055,8 @@ readMatches(vector<int>& seq,
       vector<LONGLONG>& extn,
       vector<LONGLONG>& obj,
       typename S::MCat& matches,
-      vector<typename S::Extension*>& extensions,
-      vector<typename S::ColorExtension*>& colorExtensions,
+      const vector<typename S::Extension*>& extensions,
+      const vector<typename S::ColorExtension*>& colorExtensions,
       const ExtensionObjectSet& skipSet,
       int minMatches,
       bool usePM) {
@@ -1161,8 +1161,8 @@ template <class S>
 void
 readMatches(img::FTable& table,
 	    typename S::MCat& matches,
-	    vector<typename S::Extension*>& extensions,
-	    vector<typename S::ColorExtension*>& colorExtensions,
+	    const vector<typename S::Extension*>& extensions,
+	    const vector<typename S::ColorExtension*>& colorExtensions,
 	    const ExtensionObjectSet& skipSet,
 	    int minMatches,
 	    bool usePM) {
@@ -1444,8 +1444,8 @@ Photo::fillDetection(Photo::Detection* d,
 template <class S>
 void readObjects(const img::FTable& extensionTable,
 		 const vector<Exposure*>& exposures,
-		 vector<typename S::Extension*>& extensions,
-		 vector<astrometry::SphericalCoords*> fieldProjections,
+		 const vector<typename S::Extension*>& extensions,
+		 const vector<astrometry::SphericalCoords*>& fieldProjections,
 		 bool logging) {
 
   // Should be safe to multithread this loop as different threads write
@@ -1771,7 +1771,7 @@ void readObjects_oneExtension(
 template <class S>
 void
 readColors(img::FTable extensionTable,
-	   vector<typename S::ColorExtension*> colorExtensions,
+	   const vector<typename S::ColorExtension*> & colorExtensions,
 	   bool logging) {
 
   for (int iext = 0; iext < colorExtensions.size(); iext++) {
@@ -2889,8 +2889,8 @@ whoNeedsColor<AP>(vector<AP::Extension*> extensions); \
 template void \
 readObjects<AP>(const img::FTable& extensionTable, \
 		const vector<Exposure*>& exposures, \
-		vector<typename AP::Extension*>& extensions, \
-		vector<astrometry::SphericalCoords*> fieldProjections, \
+		const vector<typename AP::Extension*>& extensions, \
+		const vector<astrometry::SphericalCoords*>& fieldProjections, \
                 bool logging);	      \
 template void \
 readObjects_oneExtension<AP>(const vector<Exposure*>& exposures, \
@@ -2906,14 +2906,14 @@ readObjects_oneExtension<AP>(const vector<Exposure*>& exposures, \
 template void \
 readMatches<AP>(img::FTable& table, \
 		typename AP::MCat& matches, \
-		vector<typename AP::Extension*>& extensions, \
-		vector<typename AP::ColorExtension*>& colorExtensions, \
+		const vector<typename AP::Extension*>& extensions, \
+		const vector<typename AP::ColorExtension*>& colorExtensions, \
 		const ExtensionObjectSet& skipSet, \
 		int minMatches, \
 		bool usePM);  \
 template void \
 readColors<AP>(img::FTable extensionTable, \
-	       vector<AP::ColorExtension*> colorExtensions, \
+	       const vector<AP::ColorExtension*> & colorExtensions, \
 	       bool logging);    \
 template void  \
 purgeNoisyDetections<AP>(double maxError,  \
