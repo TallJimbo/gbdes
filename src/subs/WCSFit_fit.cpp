@@ -15,11 +15,6 @@ FitClass::FitClass() {
     randomNumberSeed = 0;
     minimumImprovement = 0.02;
     clipThresh = 5.;
-    fixMapList = {};
-    fieldNames = {};
-    fieldProjections = vector<SphericalCoords*>(0);
-    fieldEpochs = vector<double>(0);
-    instruments = vector<unique_ptr<Instrument>>(0);
     
     /*cerr << "setup inputYAML" << endl;
     YAMLCollector inputYAML(inputMaps, PixelMapCollection::magicKey);
@@ -735,7 +730,7 @@ void FitClass::fit(){
     //////////////////////////////////////
 
     PROGRESS(1,Saving astrometric residuals);
-    vector<SphericalCoords*> extensionProjections(extensions.size());
+    extensionProjections.resize(extensions.size());
     // Save the pointwise fitting results
     {
       // This routine needs an array of field projections for each extension
@@ -748,7 +743,7 @@ void FitClass::fit(){
 	if (iExposure<0 || !exposures[iExposure])
 	  continue;
 	int iField = exposures[iExposure]->field;
-	extensionProjections[i] = fieldProjections[iField];
+	extensionProjections[i] = fieldProjections[iField].get();
       }
       PROGRESS(2, extensionProjections completed);
       
@@ -771,9 +766,6 @@ void FitClass::cleanup() {
     // And get rid of match itself.
     im = matches.erase(im);
   }
-  // Get rid of the coordinate systems for each field:
-  for (int i=0; i<fieldProjections.size(); i++)
-    delete fieldProjections[i];
   // Get rid of extensions
   for (int i=0; i<extensions.size(); i++)
     if (extensions[i]) delete extensions[i];

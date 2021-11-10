@@ -307,7 +307,7 @@ void
 readFields(string inputTables,
 	   string outCatalog,
 	   NameIndex& fieldNames,
-	   vector<astrometry::SphericalCoords*>& fieldProjections,
+	   vector<std::unique_ptr<astrometry::SphericalCoords>>& fieldProjections,
 	   vector<double>& fieldEpochs,
 	   double defaultEpoch) {
   const double MINIMUM_EPOCH=1900.;
@@ -334,7 +334,7 @@ readFields(string inputTables,
     spaceReplace(name[i]);
     fieldNames.append(name[i]);
     astrometry::Orientation orient(astrometry::SphericalICRS(ra[i]*WCS_UNIT, dec[i]*WCS_UNIT));
-    fieldProjections.push_back( new astrometry::Gnomonic(orient));
+    fieldProjections.emplace_back( new astrometry::Gnomonic(orient));
   }
   cerr << "rf 6" << endl;
   if (ft.hasColumn("PM_EPOCH")) {
@@ -1444,7 +1444,7 @@ template <class S>
 void readObjects(const img::FTable& extensionTable,
 		 const vector<Exposure*>& exposures,
 		 const vector<typename S::Extension*>& extensions,
-		 const vector<astrometry::SphericalCoords*>& fieldProjections,
+		 const vector<unique_ptr<astrometry::SphericalCoords>>& fieldProjections,
 		 bool logging) {
 
   // Should be safe to multithread this loop as different threads write
@@ -1664,7 +1664,7 @@ void readObjects_oneExtension(
       string magKey, int magKeyElement, string magErrKey, int magErrKeyElement, // TODO: make these dictionary?
       string pmRaKey, string pmDecKey, string parallaxKey,
       vector<typename S::Extension*>& extensions,
-      vector<astrometry::SphericalCoords*> fieldProjections,
+      const vector<unique_ptr<astrometry::SphericalCoords>> & fieldProjections,
       bool logging,
       bool useRows
       ) {
@@ -2889,7 +2889,7 @@ template void \
 readObjects<AP>(const img::FTable& extensionTable, \
 		const vector<Exposure*>& exposures, \
 		const vector<typename AP::Extension*>& extensions, \
-		const vector<astrometry::SphericalCoords*>& fieldProjections, \
+		const vector<unique_ptr<astrometry::SphericalCoords>>& fieldProjections, \
                 bool logging);	      \
 template void \
 readObjects_oneExtension<AP>(const vector<Exposure*>& exposures, \
@@ -2899,7 +2899,7 @@ readObjects_oneExtension<AP>(const vector<Exposure*>& exposures, \
     string magKey, int magKeyElement, string magErrKey, int magErrKeyElement, \
     string pmRaKey, string pmDecKey, string parallaxKey, \
     vector<typename AP::Extension*>& extensions, \
-    vector<astrometry::SphericalCoords*> fieldProjections, \
+    const vector<unique_ptr<astrometry::SphericalCoords>> & fieldProjections, \
     bool logging, \
     bool useRows);  \
 template void \

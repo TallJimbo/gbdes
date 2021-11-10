@@ -74,7 +74,7 @@ class FitClass {
 
     // All we care about fields are names and orientations:
     NameIndex fieldNames;
-    vector<SphericalCoords*> fieldProjections;
+    vector<unique_ptr<SphericalCoords>> fieldProjections;
     vector<double> fieldEpochs;
     
     vector<unique_ptr<Instrument>> instruments;
@@ -98,7 +98,7 @@ class FitClass {
     // List of all Matches - they will hold pointers to all Detections too.
     MCat matches;
 
-    vector<SphericalCoords*> extensionProjections;//extensions.size(), nullptr);  
+    vector<SphericalCoords*> extensionProjections; // owned by fieldProjections.
     
     //set<string> degenerateTypes; //={"Poly","Linear","Constant"};
     //void addInputYAML(string inputMaps);

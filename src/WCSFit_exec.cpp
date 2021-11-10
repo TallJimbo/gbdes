@@ -243,7 +243,7 @@ main(int argc, char *argv[])
   // All we care about fields are names and orientations:
   // Read the Fields table from input, copy to a new output FITS file, extract needed info
   //NameIndex fieldNames;
-  //vector<SphericalCoords*> fieldProjections;
+  //vector<unique_ptr<SphericalCoords>> fieldProjections;
   //vector<double> fieldEpochs;
   
   readFields(inputTables, outCatalog, fitclass.fieldNames, fitclass.fieldProjections,
@@ -747,7 +747,7 @@ continue;
       
     // All we care about fields are names and orientations:
     NameIndex fieldNames;
-    vector<SphericalCoords*> fieldProjections;
+    vector<unique_ptr<SphericalCoords>> fieldProjections;
     vector<double> fieldEpochs;
     // Read the Fields table from input, copy to a new output FITS file, extract needed info
     readFields(inputTables, outCatalog, fieldNames, fieldProjections,
