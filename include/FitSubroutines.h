@@ -85,7 +85,7 @@ struct Astro {
 
   static void reportStatistics(const list<typename Astro::Match*>& matches,
 			       const vector<unique_ptr<Exposure>>& exposures,
-			       const vector<typename Astro::Extension*>& extensions,
+			       const vector<unique_ptr<Astro::Extension>>& extensions,
 			       ostream& os);
 
   // Specialized function for reading detection from a catalog
@@ -141,7 +141,7 @@ struct Photo {
 
   static void reportStatistics(const list<typename Photo::Match*>& matches,
 			       const vector<unique_ptr<Exposure>>& exposures,
-			       const vector<typename Photo::Extension*>& extensions,
+			       const vector<unique_ptr<Photo::Extension>>& extensions,
 			       ostream& os);
 
   // This is a no-op for photometry:
@@ -310,7 +310,7 @@ readExposures(const vector<unique_ptr<Instrument>>& instruments,
 // the column in the extensionTable named sysErrorColumn, if it is non-Null,
 // otherwise taken from the value of sysError or referenceSysError as appropriate
 template <class S>
-vector<typename S::Extension*>
+vector<unique_ptr<typename S::Extension>>
 readExtensions(img::FTable& extensionTable,
 	       const vector<unique_ptr<Instrument>>& instruments,
 	       const vector<unique_ptr<Exposure>>& exposures,
@@ -333,7 +333,7 @@ int
 findCanonical(Instrument& instr,
 	      int iInst,
 	      vector<unique_ptr<Exposure>>& exposures,
-	      vector<typename S::Extension*>& extensions,
+	      vector<unique_ptr<typename S::Extension>>& extensions,
 	      typename S::Collection& pmc);
 
 // Add every extension's map to the YAMLCollector and then emit the
@@ -344,14 +344,14 @@ template <class S>
 void
 createMapCollection(const vector<unique_ptr<Instrument>>& instruments,
 		    const vector<unique_ptr<Exposure>>& exposures,
-		    const vector<typename S::Extension*> extensions,
+		    const vector<unique_ptr<typename S::Extension>> & extensions,
 		    astrometry::YAMLCollector& inputYAML,
 		    typename S::Collection& pmc);
 
 // Set the bool in each Extension indicating whether its map uses color
 template <class S>
 void
-whoNeedsColor(vector<typename S::Extension*> extensions);
+whoNeedsColor(const vector<unique_ptr<typename S::Extension>> & extensions);
 	      
 // Read a MatchCatalog Extension, recording in each extension the
 // objects from it that need to be read from catalog.
@@ -364,7 +364,7 @@ readMatches(vector<int>& seq,
       	vector<LONGLONG>& extn,
       	vector<LONGLONG>& obj,
 	    typename S::MCat& matches,
-	    const vector<typename S::Extension*>& extensions,
+	    const vector<unique_ptr<typename S::Extension>>& extensions,
 	    const vector<unique_ptr<typename S::ColorExtension>>& colorExtensions,
 	    const ExtensionObjectSet& skipSet,
 	    int minMatches,
@@ -374,7 +374,7 @@ template <class S>
 void
 readMatches(img::FTable& table,
 	    typename S::MCat& matches,
-	    const vector<typename S::Extension*>& extensions,
+	    const vector<unique_ptr<typename S::Extension>>& extensions,
 	    const vector<unique_ptr<typename S::ColorExtension>>& colorExtensions,
 	    const ExtensionObjectSet& skipSet,
 	    int minMatches,
@@ -386,7 +386,7 @@ readMatches(img::FTable& table,
 template <class S>
 void readObjects(const img::FTable& extensionTable,
 		 const vector<unique_ptr<Exposure>>& exposures,
-		 const vector<typename S::Extension*>& extensions,
+		 const vector<unique_ptr<typename S::Extension>>& extensions,
 		 const vector<std::unique_ptr<astrometry::SphericalCoords>>& fieldProjections,
 		 bool logging=true); //Give progress updates?
 
@@ -397,7 +397,7 @@ void readObjects_oneExtension(const vector<unique_ptr<Exposure>>& exposures,
 	  vector<string> xyErrKeys,
 	  string magKey, int magKeyElement, string magErrKey, int magErrKeyElement,
 	  string pmRaKey, string pmDecKey, string parallaxKey,
-      vector<typename S::Extension*>& extensions,
+      vector<unique_ptr<typename S::Extension>>& extensions,
       vector<astrometry::SphericalCoords*> fieldProjections,
       bool logging,
       bool useRows
@@ -419,7 +419,7 @@ void
 purgeNoisyDetections(double maxError,
 		     typename S::MCat& matches,
 		     const vector<unique_ptr<Exposure>>& exposures,
-		     const vector<typename S::Extension*>& extensions);
+		     const vector<unique_ptr<typename S::Extension>>& extensions);
 
 // Get rid of Matches with too few Detections being fit: delete
 // the Match and all of its Detections.
@@ -447,7 +447,7 @@ map<string, long>
 findUnderpopulatedExposures(long minFitExposure,
 			    const typename S::MCat& matches,
 			    const vector<unique_ptr<Exposure>> & exposures,
-			    const vector<typename S::Extension*> extensions,
+			    const vector<unique_ptr<typename S::Extension>> & extensions,
 			    const typename S::Collection& pmc);
 
 // Fix the parameters of a map, and mark all Detections making
@@ -456,7 +456,7 @@ template <class S>
 void
 freezeMap(string mapName,
 	  typename S::MCat& matches,
-	  vector<typename S::Extension*>& extensions,
+	  vector<unique_ptr<typename S::Extension>>& extensions,
 	  typename S::Collection& pmc);
 
 // Report number of unclipped matches and their chisq
@@ -479,6 +479,6 @@ list<photometry::PhotoPrior*>
 readPriors(string filename, 
 	   const vector<unique_ptr<Instrument>>& instruments, 
 	   const vector<unique_ptr<Exposure>>& exposures, 
-	   const vector<Photo::Extension*>& extensions);
+	   const vector<unique_ptr<Photo::Extension>>& extensions);
 
 #endif

@@ -92,30 +92,12 @@ void FitClass::setExposures(vector<unique_ptr<Exposure>> expos, double sysErr, d
   }
 }
 
-void FitClass::setExtensions(vector<shared_ptr<Extension>> extens) {
-
-  SPextensions = extens;
-  extensions.reserve(SPextensions.size());
-  for (auto e : SPextensions) {
-    //extensions.push_back(e.get());
-    typename Astro::Extension* extn = new typename Astro::Extension;
-
-    extn->exposure = e->exposure;
-    extn->device = e->device;
-    extn->airmass = e->airmass;
-    extn->magshift = e->magshift;
-    extn->wcsName = e->wcsName;
-    extn->mapName = e->mapName;
-    extensions.push_back(extn);
-  }
-}
-
 void FitClass::setRefWCSNames() {
   PROGRESS(2,Setting reference wcsNames);
 
   // A special loop here to set the wcsname of reference extensions to the
   // name of their field.
-  for (auto extnptr : extensions) {
+  for (auto const & extnptr : extensions) {
     if (!extnptr) continue;
     const Exposure& expo = *exposures[extnptr->exposure];
     if ( expo.instrument >= 0) continue;
@@ -208,7 +190,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
       vector<bool> fieldHasFree(fieldNames.size(), false);
       vector<bool> fieldHasFixed(fieldNames.size(), false);
       cerr << "check 4.31" << endl;
-      for (auto extnptr : extensions) {
+      for (auto const & extnptr : extensions) {
         if (!extnptr) continue; // Not in use
         cerr << "check 4.32" << endl;
         int field = exposures[extnptr->exposure]->field;
@@ -334,7 +316,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     // Fit set of extensions to initialize defaulted map(s)
     set<Extension*> defaultedExtensions;
     for (auto iextn : extnSet) {
-      defaultedExtensions.insert(extensions[iextn]);
+      defaultedExtensions.insert(extensions[iextn].get());
       initializedExtensions.insert(iextn);
     }
     for (auto s : defaultedExtensions) {
@@ -356,7 +338,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     // Skip extensions that don't exist or are already initialized
     if (!extensions[iextn] || initializedExtensions.count(iextn))
       continue;
-    set<Extension*> defaultedExtensions = {extensions[iextn]};
+    set<Extension*> defaultedExtensions = {extensions[iextn].get()};
     fitDefaulted(mapCollection,
                   defaultedExtensions,
                   instruments,
@@ -399,7 +381,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
 
   // Before reading objects, we want to set all starting WCS's to go into
   // field coordinates.
-  for (auto extnptr : extensions) {
+  for (auto const & extnptr : extensions) {
     if (!extnptr) continue;
     if (extnptr->exposure < 0) continue;
     int ifield = exposures[extnptr->exposure]->field;
@@ -438,7 +420,7 @@ void FitClass::defaultMaps() {
     // Fit set of extensions to initialize defaulted map(s)
     set<Extension*> defaultedExtensions;
     for (auto iextn : extnSet) {
-      defaultedExtensions.insert(extensions[iextn]);
+      defaultedExtensions.insert(extensions[iextn].get());
       initializedExtensions.insert(iextn);
     }
     for (auto s : defaultedExtensions) {
@@ -460,7 +442,7 @@ void FitClass::defaultMaps() {
     // Skip extensions that don't exist or are already initialized
     if (!extensions[iextn] || initializedExtensions.count(iextn))
       continue;
-    set<Extension*> defaultedExtensions = {extensions[iextn]};
+    set<Extension*> defaultedExtensions = {extensions[iextn].get()};
     fitDefaulted(mapCollection,
                   defaultedExtensions,
                   instruments,
@@ -506,7 +488,7 @@ void FitClass::reprojectWCSs() {
 
   // Before reading objects, we want to set all starting WCS's to go into
   // field coordinates.
-  for (auto extnptr : extensions) {
+  for (auto const & extnptr : extensions) {
     if (!extnptr) continue;
     if (extnptr->exposure < 0) continue;
     int ifield = exposures[extnptr->exposure]->field;
@@ -754,10 +736,4 @@ void FitClass::cleanup() {
     // And get rid of match itself.
     im = matches.erase(im);
   }
-  // Get rid of extensions
-  for (int i=0; i<extensions.size(); i++)
-    if (extensions[i]) delete extensions[i];
-  // Get rid of exposures
-  //for (int i=0; i<exposures.size(); i++)
-  //  if (exposures[i]) delete exposures[i];
 }

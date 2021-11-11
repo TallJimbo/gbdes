@@ -84,8 +84,7 @@ class FitClass {
     
     // Extension tables:
     vector<unique_ptr<ColorExtension>> colorExtensions;
-    vector<Extension*> extensions;
-    vector<shared_ptr<Extension>> SPextensions;
+    vector<unique_ptr<Extension>> extensions;
     
     // Class that will build a starting YAML config for all extensions
     //YAMLCollector inputYAML;// = YAMLCollector("", PixelMapCollection::magicKey);
@@ -103,8 +102,6 @@ class FitClass {
     //void addInputYAML(string inputMaps);
 
     void setExposures(vector<unique_ptr<Exposure>> expos, double sysErr, double refSysErr);
-    
-    void setExtensions(vector<shared_ptr<Extension>> extens);
 
     void setRefWCSNames();
 
