@@ -83,7 +83,7 @@ class FitClass {
     vector<unique_ptr<Exposure>> exposures;
     
     // Extension tables:
-    vector<ColorExtension*> colorExtensions;
+    vector<unique_ptr<ColorExtension>> colorExtensions;
     vector<Extension*> extensions;
     vector<shared_ptr<Extension>> SPextensions;
     

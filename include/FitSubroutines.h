@@ -315,7 +315,7 @@ readExtensions(img::FTable& extensionTable,
 	       const vector<unique_ptr<Instrument>>& instruments,
 	       const vector<unique_ptr<Exposure>>& exposures,
 	       const vector<int>& exposureColorPriorities,
-	       vector<typename S::ColorExtension*>& colorExtensions,
+	       vector<unique_ptr<typename S::ColorExtension>>& colorExtensions,
 	       astrometry::YAMLCollector& inputYAML,
 	       bool logging=true);
 
@@ -365,7 +365,7 @@ readMatches(vector<int>& seq,
       	vector<LONGLONG>& obj,
 	    typename S::MCat& matches,
 	    const vector<typename S::Extension*>& extensions,
-	    const vector<typename S::ColorExtension*>& colorExtensions,
+	    const vector<unique_ptr<typename S::ColorExtension>>& colorExtensions,
 	    const ExtensionObjectSet& skipSet,
 	    int minMatches,
 	    bool usePM=false);        // If true, create PMMatches
@@ -375,7 +375,7 @@ void
 readMatches(img::FTable& table,
 	    typename S::MCat& matches,
 	    const vector<typename S::Extension*>& extensions,
-	    const vector<typename S::ColorExtension*>& colorExtensions,
+	    const vector<unique_ptr<typename S::ColorExtension>>& colorExtensions,
 	    const ExtensionObjectSet& skipSet,
 	    int minMatches,
 	    bool usePM=false);        // If true, create PMMatches
@@ -408,7 +408,7 @@ void readObjects_oneExtension(const vector<unique_ptr<Exposure>>& exposures,
 template <class S>
 void
 readColors(img::FTable extensionTable,
-	   const vector<typename S::ColorExtension*>& colorExtensions,
+	   const vector<unique_ptr<typename S::ColorExtension>>& colorExtensions,
 	   bool logging=true); // Progress reports
 
 // Find all matched Detections that exceed allowable error, then
