@@ -1593,8 +1593,8 @@ void readObjects(const img::FTable& extensionTable,
     double magshift = extn.magshift;
 
     // Get fieldProjection for this catalog
-    astrometry::SphericalCoords* fieldProjection =
-      fieldProjections[expo.field]->duplicate();
+    unique_ptr<astrometry::SphericalCoords> fieldProjection(
+      fieldProjections[expo.field]->duplicate());
     
     if (S::isAstro) {
       errorColumnIsDouble = isDouble(ff, pmCatalog ? pmCovKey : xyErrKeys[0], -1);
@@ -1640,8 +1640,6 @@ void readObjects(const img::FTable& extensionTable,
 			 startWcs, isTag);
       }
     } // End loop over catalog objects
-
-    if (fieldProjection) delete fieldProjection;
 
     if (!extn.keepers.empty()) {
       cerr << "Did not find all desired objects in catalog " << filename
@@ -1707,8 +1705,7 @@ void readObjects_oneExtension(
   double magshift = extn.magshift;
   
   // Get fieldProjection for this catalog
-  astrometry::SphericalCoords* fieldProjection =
-    fieldProjections[expo.field]->duplicate();
+  unique_ptr<astrometry::SphericalCoords> fieldProjection(fieldProjections[expo.field]->duplicate());
   
   if (S::isAstro) {
     errorColumnIsDouble = isDouble(ff, pmCatalog ? pmCovKey : xyErrKeys[0], -1);
@@ -1755,8 +1752,6 @@ void readObjects_oneExtension(
     }
   } // End loop over catalog objects
   
-  if (fieldProjection) delete fieldProjection;
-
   if (!extn.keepers.empty()) {
     cerr << "Did not find all desired objects extension " << iext << endl;
     exit(1);
