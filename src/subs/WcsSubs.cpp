@@ -99,8 +99,8 @@ fitDefaulted(PixelMapCollection& pmc,
       double ypix = b.getXMin() + (vy[i]+0.5)*ystep;
       double xw, yw;
       extnptr->startWcs->toWorld(xpix, ypix, xw, yw); // startWCS has no color!
-      Detection* dfit = new Detection;
-      Detection* dref = new Detection;
+      unique_ptr<Detection> dfit(new Detection);
+      unique_ptr<Detection> dref(new Detection);
       if (i == 10) {
         cerr << "pix check " << xpix << " " << ypix << " " << xw << " " << yw << endl;
       }
@@ -131,8 +131,8 @@ fitDefaulted(PixelMapCollection& pmc,
       dref->map = identityMap;
       dfit->map = map;
       
-      matches.push_back(new Match(dfit));
-      matches.back()->add(dref);
+      matches.push_back(new Match(std::move(dfit)));
+      matches.back()->add(std::move(dref));
     }
 
   }
@@ -151,7 +151,7 @@ fitDefaulted(PixelMapCollection& pmc,
 
   // Delete the Matches and Detections
   for (auto m : matches) {
-    m->clear(true);  // Flush the detections
+    m->clear();  // Flush the detections
     // And get rid of match itself.
     delete m;
   } 

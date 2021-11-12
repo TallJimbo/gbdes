@@ -1100,17 +1100,17 @@ readMatches(vector<int>& seq,
         typename S::Match* m=nullptr;
         for (int j=0; j<matchExtns.size(); j++) {
           if (matchExtns[j]<0) continue;  // Skip detections starved of their color
-          auto d = new typename S::Detection;  
+          unique_ptr<typename S::Detection> d(new typename S::Detection);
           d->catalogNumber = matchExtns[j];
           d->objectNumber = matchObjs[j];
           extensions[matchExtns[j]]->keepers.insert(std::pair<long,typename S::Detection*>
-                      (matchObjs[j], d));
+                      (matchObjs[j], d.get()));
           if (m)
-            m->add(d);
+            m->add(std::move(d));
           else {
             // Make a new Match object from this detection.
             // It might be a PMMatch if this is an appropriate catalog.
-            m = S::makeNewMatch(d, usePM);
+            m = S::makeNewMatch(std::move(d), usePM);
           }
         }
         matches.push_back(m);
@@ -1180,7 +1180,7 @@ readMatches(img::FTable& table,
 // Subroutine to get what we want from a catalog entry for WCS fitting
 inline
 void
-Astro::fillDetection(Astro::Detection* d,
+Astro::fillDetection(Astro::Detection & d,
 		     const Exposure* e,
 		     astrometry::SphericalCoords& fieldProjection, 
 		     img::FTable& table, long irow,
@@ -1194,15 +1194,15 @@ Astro::fillDetection(Astro::Detection* d,
 		     double magshift,
 		     const astrometry::PixelMap* startWcs,
 		     bool isTag) {
-  d->xpix = getTableDouble(table, xKey, -1, xColumnIsDouble, irow);
-  d->ypix = getTableDouble(table, yKey, -1, yColumnIsDouble, irow);
+  d.xpix = getTableDouble(table, xKey, -1, xColumnIsDouble, irow);
+  d.ypix = getTableDouble(table, yKey, -1, yColumnIsDouble, irow);
 
   // Get coordinates and transformation matrix
-  startWcs->toWorld(d->xpix, d->ypix, d->xw, d->yw);  // no color in startWCS
-  auto dwdp = startWcs->dWorlddPix(d->xpix, d->ypix);
+  startWcs->toWorld(d.xpix, d.ypix, d.xw, d.yw);  // no color in startWCS
+  auto dwdp = startWcs->dWorlddPix(d.xpix, d.ypix);
 
   if (isTag) {
-    d->invCov.setZero();
+    d.invCov.setZero();
   } else {
     astrometry::Matrix22 cov(0.);
     if (xyErrKeys.size()==1) {
@@ -1224,20 +1224,20 @@ Astro::fillDetection(Astro::Detection* d,
     }
     cov = dwdp * cov * dwdp.transpose();  // Note this converts to world units (degrees)
     cov += e->astrometricCovariance; 
-    d->invCov = cov.inverse();
-    d->fitWeight = e->weight;
+    d.invCov = cov.inverse();
+    d.fitWeight = e->weight;
   }
 
-  if (dynamic_cast<const PMMatch*>(d->itsMatch)) {
+  if (dynamic_cast<const PMMatch*>(d.itsMatch)) {
     // Build projection matrix if this Detection is being used in a PMMatch
-    d->buildProjector(e->pmTDB, e->observatory, &fieldProjection);
+    d.buildProjector(e->pmTDB, e->observatory, &fieldProjection);
   }
 
 }
 
 // This one reads a full 5d stellar solution
-astrometry::PMDetection*
-Astro::makePMDetection(astrometry::Detection* d, const Exposure* e,
+unique_ptr<astrometry::PMDetection>
+Astro::makePMDetection(astrometry::Detection const & d, const Exposure* e,
 		img::FTable& table, long irow,
 		string xKey, string yKey,
 		string pmRaKey, string pmDecKey, string parallaxKey, string pmCovKey,
@@ -1245,11 +1245,11 @@ Astro::makePMDetection(astrometry::Detection* d, const Exposure* e,
 		bool errorColumnIsDouble,
 		const astrometry::PixelMap* startWcs) {
 
-  auto out = new astrometry::PMDetection;
-  out->catalogNumber = d->catalogNumber;
-  out->objectNumber = d->objectNumber;
-  out->map = d->map;
-  out->itsMatch = d->itsMatch;
+  unique_ptr<astrometry::PMDetection> out(new astrometry::PMDetection);
+  out->catalogNumber = d.catalogNumber;
+  out->objectNumber = d.objectNumber;
+  out->map = d.map;
+  out->itsMatch = d.itsMatch;
   
   out->xpix = getTableDouble(table, xKey, -1, xColumnIsDouble, irow);
   out->ypix = getTableDouble(table, yKey, -1, yColumnIsDouble, irow);
@@ -1362,39 +1362,36 @@ Astro::makePMDetection(astrometry::Detection* d, const Exposure* e,
 }
 
 void
-Astro::handlePMDetection(astrometry::PMDetection* pmd, Astro::Detection* d) {
-  auto mm = d->itsMatch;
+Astro::handlePMDetection(unique_ptr<astrometry::PMDetection> pmd, Astro::Detection const & d) {
+  auto mm = d.itsMatch;
   if (dynamic_cast<astrometry::PMMatch*>(mm)) {
     // If this Detection is being used in a PMMatch,
     // replace plain old Detection with this PMDetection.
     mm->remove(d);
-    delete d;
-    mm->add(pmd);
+    mm->add(std::move(pmd));
   } else {
     // PMDetection is being used in non-PM Match.  Slice it down
     // to pure Detection info, replace old detection with it.
-    auto dd = new typename Astro::Detection(*pmd);
+    unique_ptr<Astro::Detection> dd(new Astro::Detection(*pmd));
     mm->remove(d);
-    delete d;
-    mm->add(dd);
-    delete pmd;
+    mm->add(std::move(dd));
   }
 }
  
 astrometry::Match*
-Astro::makeNewMatch(Astro::Detection* d, bool usePM) {
+Astro::makeNewMatch(unique_ptr<Astro::Detection> d, bool usePM) {
   if (usePM) {
     // Make a PMMatch
-    return new astrometry::PMMatch(d);
+    return new astrometry::PMMatch(std::move(d));
   } else {
     // Plain old Match
-    return new Match(d);
+    return new Match(std::move(d));
   }
 }
 
 // And a routine to get photometric information too
 void
-Photo::fillDetection(Photo::Detection* d,
+Photo::fillDetection(Photo::Detection & d,
 		     const Exposure* e,
 		     astrometry::SphericalCoords& fieldProjection, 
 		     img::FTable& table, long irow,
@@ -1408,33 +1405,33 @@ Photo::fillDetection(Photo::Detection* d,
 		     double magshift,
 		     const astrometry::PixelMap* startWcs,
 		     bool isTag) {
-  d->args.xDevice = getTableDouble(table, xKey, -1, xColumnIsDouble, irow);
-  d->args.yDevice = getTableDouble(table, yKey, -1, yColumnIsDouble, irow);
-  startWcs->toWorld(d->args.xDevice, d->args.yDevice,
-		    d->args.xExposure, d->args.yExposure);
+  d.args.xDevice = getTableDouble(table, xKey, -1, xColumnIsDouble, irow);
+  d.args.yDevice = getTableDouble(table, yKey, -1, yColumnIsDouble, irow);
+  startWcs->toWorld(d.args.xDevice, d.args.yDevice,
+		    d.args.xExposure, d.args.yExposure);
 
   // Get the mag input and its error
-  d->magIn = getTableDouble(table, magKey, magKeyElement, magColumnIsDouble,irow)
+  d.magIn = getTableDouble(table, magKey, magKeyElement, magColumnIsDouble,irow)
     + magshift;
   double sigma = getTableDouble(table,
 				magErrKey, magErrKeyElement, magErrColumnIsDouble,
 				irow);
 
-  if ( isnan(d->magIn) || isinf(d->magIn)) {
+  if ( isnan(d.magIn) || isinf(d.magIn)) {
     cerr << "** NaN input at row " << irow << endl;
-    d->isClipped = true;
-    d->magIn = 0.;
+    d.isClipped = true;
+    d.magIn = 0.;
   }
   // Map to output and estimate output error
-  d->magOut = d->map->forward(d->magIn, d->args);
+  d.magOut = d.map->forward(d.magIn, d.args);
 
-  d->invVar = 1. /(e->photometricVariance + sigma*sigma);
-  // Don't bother, all unity: sigma *= d->map->derivative(d->magIn, d->args);
+  d.invVar = 1. /(e->photometricVariance + sigma*sigma);
+  // Don't bother, all unity: sigma *= d.map->derivative(d.magIn, d.args);
 
   if (isTag) {
-    d->fitWeight = 0.;
+    d.fitWeight = 0.;
   } else {
-    d->fitWeight = e->magWeight;
+    d.fitWeight = e->magWeight;
   }
 }
 
@@ -1608,14 +1605,14 @@ void readObjects(const img::FTable& extensionTable,
       if (pr == extn.keepers.end()) continue; // Not a desired object
 
       // Have a desired object now.  Fill its Detection structure
-      typename S::Detection* d = pr->second;
+      auto d = pr->second;
       extn.keepers.erase(pr);
       d->map = sm;
 
       if (pmCatalog) {
 	// Need to read data differently from catalog with
 	// full proper motion solution.  Get PMDetection.
-	auto pmd = S::makePMDetection(d, &expo,
+	auto pmd = S::makePMDetection(*d, &expo,
 				      ff, irow,
 				      xKey, yKey,
 				      pmRaKey, pmDecKey, parallaxKey, pmCovKey,
@@ -1626,10 +1623,10 @@ void readObjects(const img::FTable& extensionTable,
 	// This routine will either replace the plain old Detection in
 	// a PMMatch with this PMDetection; or if it is part of a plain
 	// match, it will slice the PMDetection down to a Detection.
-	S::handlePMDetection(pmd, d);
+	S::handlePMDetection(std::move(pmd), *d);
       } else {
 	// Normal photometric or astrometric entry
-	S::fillDetection(d, &expo, *fieldProjection,
+	S::fillDetection(*d, &expo, *fieldProjection,
 			 ff, irow,
 			 xKey, yKey, xyErrKeys,
 			 magKey, magErrKey,
@@ -1719,14 +1716,14 @@ void readObjects_oneExtension(
     if (pr == extn.keepers.end()) continue; // Not a desired object
 
     // Have a desired object now.  Fill its Detection structure
-    typename S::Detection* d = pr->second;
+    auto * d = pr->second;
     extn.keepers.erase(pr);
     d->map = sm;
 
     if (pmCatalog) {
       // Need to read data differently from catalog with
       // full proper motion solution.  Get PMDetection.
-      auto pmd = S::makePMDetection(d, &expo,
+      auto pmd = S::makePMDetection(*d, &expo,
                   ff, irow,
                   xKey, yKey,
                   pmRaKey, pmDecKey, parallaxKey, pmCovKey,
@@ -1737,10 +1734,10 @@ void readObjects_oneExtension(
       // This routine will either replace the plain old Detection in
       // a PMMatch with this PMDetection; or if it is part of a plain
       // match, it will slice the PMDetection down to a Detection.
-      S::handlePMDetection(pmd, d);
+      S::handlePMDetection(std::move(pmd), *d);
     } else {
       // Normal photometric or astrometric entry
-      S::fillDetection(d, &expo, *fieldProjection,
+      S::fillDetection(*d, &expo, *fieldProjection,
             ff, irow,
             xKey, yKey, xyErrKeys,
             magKey, magErrKey,
@@ -1823,8 +1820,8 @@ readColors(img::FTable extensionTable,
       typename S::Match* m = pr->second;
       extn.keepers.erase(pr);
 
-      for ( auto detptr : *m)
-	S::setColor(detptr,color[irow]);
+      for ( auto const &  detptr : *m)
+	S::setColor(*detptr,color[irow]);
 
     } // End loop over catalog objects
 
@@ -1855,12 +1852,12 @@ purgeNoisyDetections(double maxError,
     auto j=mptr->begin(); 
     int k=0;
     while (j != mptr->end()) {
-      auto d = *j; // Yields pointer to each detection
+      auto const & d = *j; // Yields pointer to each detection
       // Keep it if error is small or if it's from a tag or reference "instrument"
       if ( (d->isClipped || d->getSigma() > maxError) &&
 	   exposures[ extensions[d->catalogNumber]->exposure]->instrument >= 0) {
        cerr << "erasing one" << endl;
-	j = mptr->erase(j, true);  // will delete the detection too.
+	j = mptr->erase(j);  // will delete the detection too.
         ++eraseCount;
       } else {
 	++j;
@@ -1880,7 +1877,7 @@ purgeSparseMatches(int minMatches,
   while (im != matches.end() ) {
     if ( (*im)->fitSize() < minMatches) {
       // Remove entire match if it's too small, and kill its Detections too
-      (*im)->clear(true);
+      (*im)->clear();
       im = matches.erase(im);
     } else {
       ++im;
@@ -1901,12 +1898,12 @@ purgeBadColor(double minColor, double maxColor,
       // See if color is in range, using color from first Detection (they should
       // all have the same color).
       // Also kills things with NaN / inf colors
-      double color = S::getColor(*(*im)->begin());
+      double color = S::getColor(**(*im)->begin());
       if ( (color != astrometry::NODATA 
             && (color < minColor || color > maxColor) )
 	   || !isfinite(color) ) {
 	// Remove entire match if it's too small, and kill its Detections too
-	(*im)->clear(true);
+	(*im)->clear();
 	im = matches.erase(im);
 	continue;
       }
@@ -1941,7 +1938,7 @@ findUnderpopulatedExposures(long minFitExposure,
   vector<long> extnCounts(extensions.size(), 0);
   for (auto mptr : matches)
     if (!mptr->getReserved())
-      for (auto dptr : *mptr)
+      for (auto const & dptr : *mptr)
 	if (!dptr->isClipped)
 	  extnCounts[dptr->catalogNumber]++;
 
@@ -1992,7 +1989,7 @@ freezeMap(string mapName,
     bool recount = false;
     for (auto dptr = mptr->begin(); dptr!=mptr->end(); ++dptr)
       if (badExtensions.count((*dptr)->catalogNumber)>0) {
-	dptr = mptr->erase(dptr, true);
+	dptr = mptr->erase(dptr);
 	recount = true;
       }
   }
@@ -2147,7 +2144,7 @@ Photo::saveResults(const list<Match*>& matches,
 
       double meanMag = m->getMean();
 
-      for (auto detptr : *m) {
+      for (auto const & detptr : *m) {
 	// Save some basics:
 	matchID.push_back(iMatch);
 	catalogNumber.push_back(detptr->catalogNumber);
@@ -2324,10 +2321,10 @@ Astro::saveResults(const astrometry::MCat& matches,
     
 	double matchColor = astrometry::NODATA;
 
-	for (auto detptr : *m) {
+	for (auto const & detptr : *m) {
 
 	  // Get a pointer to a PMDetection if this is one:
-	  auto pmDetPtr = dynamic_cast<const PMDetection*> (detptr);
+	  auto pmDetPtr = dynamic_cast<const PMDetection*> (detptr.get());
 	  if (pmDetPtr) {
 #ifdef _OPENMP
 #pragma omp critical(pmdet)
@@ -2358,7 +2355,7 @@ Astro::saveResults(const astrometry::MCat& matches,
 
 	  // Let's get the model prediction
 	  if (pmm)
-	    xyMean = pmm->predict(detptr);
+	    xyMean = pmm->predict(detptr.get());
 
 	  // Get world residuals (returned RESIDUAL_UNIT)
 	  astrometry::Vector2 residW = detptr->residWorld();
@@ -2570,11 +2567,11 @@ Astro::saveResults(const astrometry::MCat& matches,
       int clipCount = 0;
       double matchColor = astrometry::NODATA;
 
-      for (auto detptr : *m) {
+      for (auto const & detptr : *m) {
 	// Get a pointer to a PMDetection if this is one:
-	auto pmDetPtr = dynamic_cast<const PMDetection*> (detptr);
+	auto pmDetPtr = dynamic_cast<const PMDetection*> (detptr.get());
 
-	if (m->isFit(detptr)) {
+	if (m->isFit(*detptr)) {
 	  if (pmDetPtr) {
 	    pmDetCount++;
 	  } else {
@@ -2608,7 +2605,7 @@ Astro::saveResults(const astrometry::MCat& matches,
 	auto pm = pmm->getPM();
 	// Convert xW, yW to RA/Dec for this table, in WCS_UNITS
 	astrometry::SphericalCoords* projection;
-	for (auto detptr : *m) {
+	for (auto const & detptr : *m) {
 	  projection = catalogProjections[detptr->catalogNumber];
 	  if (projection) break;
 	}
@@ -2689,7 +2686,7 @@ Photo::reportStatistics(const list<typename Photo::Match*>& matches,
     mptr->remap(true);
     mptr->solve();
 
-    for (auto dptr : *mptr) {
+    for (auto const & dptr : *mptr) {
       // Accumulate statistics for meaningful residuals
       int exposureNumber = extensions[dptr->catalogNumber]->exposure;
       Exposure* expo = exposures[exposureNumber].get();
@@ -2697,26 +2694,26 @@ Photo::reportStatistics(const list<typename Photo::Match*>& matches,
 	if (expo->instrument==REF_INSTRUMENT ||
 	    expo->instrument==PM_INSTRUMENT) {
 	  // Treat PM like reference for photometry
-	  refAccReserve.add(dptr);
-	  vaccReserve[exposureNumber].add(dptr);
+	  refAccReserve.add(*dptr);
+	  vaccReserve[exposureNumber].add(*dptr);
 	} else if (expo->instrument==TAG_INSTRUMENT) {
 	  // do nothing
 	} else {
-	  accReserve.add(dptr);
-	  vaccReserve[exposureNumber].add(dptr);
+	  accReserve.add(*dptr);
+	  vaccReserve[exposureNumber].add(*dptr);
 	}
       } else {
 	// Not a reserved object:
 	if (expo->instrument==REF_INSTRUMENT ||
 	    expo->instrument==PM_INSTRUMENT) {
 	  // Treat PM like reference for photometry
-	  refAccFit.add(dptr);
-	  vaccFit[exposureNumber].add(dptr);
+	  refAccFit.add(*dptr);
+	  vaccFit[exposureNumber].add(*dptr);
 	} else if (expo->instrument==TAG_INSTRUMENT) {
 	  // do nothing
 	} else {
-	  accFit.add(dptr);
-	  vaccFit[exposureNumber].add(dptr);
+	  accFit.add(*dptr);
+	  vaccFit[exposureNumber].add(*dptr);
 	}
       }
     } // end Detection loop
@@ -2777,32 +2774,32 @@ Astro::reportStatistics(const list<typename Astro::Match*>& matches,
     mptr->remap(true);
     mptr->solve();
 
-    for (auto dptr : *mptr) {
+    for (auto const & dptr : *mptr) {
       // Accumulate statistics for meaningful residuals
       int exposureNumber = extensions[dptr->catalogNumber]->exposure;
       Exposure* expo = exposures[exposureNumber].get();
       if (mptr->getReserved()) {
 	if (expo->instrument==REF_INSTRUMENT ||
 	    expo->instrument==PM_INSTRUMENT) {
-	  refAccReserve.add(dptr);
-	  vaccReserve[exposureNumber].add(dptr);
+	  refAccReserve.add(*dptr);
+	  vaccReserve[exposureNumber].add(*dptr);
 	} else if (expo->instrument==TAG_INSTRUMENT) {
 	  // do nothing
 	} else {
-	  accReserve.add(dptr);
-	  vaccReserve[exposureNumber].add(dptr);
+	  accReserve.add(*dptr);
+	  vaccReserve[exposureNumber].add(*dptr);
 	}
       } else {
 	// Not a reserved object:
 	if (expo->instrument==REF_INSTRUMENT ||
 	    expo->instrument==PM_INSTRUMENT) {
-	  refAccFit.add(dptr);
-	  vaccFit[exposureNumber].add(dptr);
+	  refAccFit.add(*dptr);
+	  vaccFit[exposureNumber].add(*dptr);
 	} else if (expo->instrument==TAG_INSTRUMENT) {
 	  // do nothing
 	} else {
-	  accFit.add(dptr);
-	  vaccFit[exposureNumber].add(dptr);
+	  accFit.add(*dptr);
+	  vaccFit[exposureNumber].add(*dptr);
 	}
       }
     } // end Detection loop

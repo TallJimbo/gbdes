@@ -92,7 +92,9 @@ public:
   std::unique_ptr<astrometry::Wcs> startWcs;  // Input Wcs for this extension (owned by this class)
   bool needsColor;	// Save info on whether map requires color information.
 
-  std::map<long, T2*> keepers; // The objects from this Extension catalog that we will use
+  // The objects from this Extension catalog that we will use.  The Detection
+  // objects pointed at here are owned by Match objects.
+  std::map<long, T2*> keepers;
   void addWcs(string wcsin) {
     istringstream iss(wcsin);
     astrometry::PixelMapCollection pmcTemp;
