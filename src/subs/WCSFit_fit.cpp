@@ -133,7 +133,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     PROGRESS(1,Building initial PixelMapCollection);
     cerr << "check 4" << endl;
     // Now build a preliminary set of pixel maps from the configured YAML files
-    PixelMapCollection* pmcInit = new PixelMapCollection;
+    unique_ptr<PixelMapCollection> pmcInit(new PixelMapCollection);
     assert (pmcInit);
     cerr << "pmcInit maps: " << to_string(pmcInit->nMaps()) << endl;
     //cerr << "pmcInit len: " << to_string(pmcInit->allMapNames().size()) << endl;
@@ -264,8 +264,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     PROGRESS(1,Making final mapCollection);
     cerr << "check 6" << endl;
     // Do not need the preliminary PMC any more.
-    delete pmcInit;
-    pmcInit = 0;
+    pmcInit.reset();
     // And clean out any old maps stored in the YAMLCollector
     inputYAML.clearMaps();
     cerr << "check 7 " << endl;
