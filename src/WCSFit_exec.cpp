@@ -240,18 +240,8 @@ main(int argc, char *argv[])
 
   PROGRESS(1,Reading fields);
 
-  // All we care about fields are names and orientations:
-  // Read the Fields table from input, copy to a new output FITS file, extract needed info
-  //NameIndex fieldNames;
-  //vector<unique_ptr<SphericalCoords>> fieldProjections;
-  //vector<double> fieldEpochs;
-  
-  readFields(inputTables, outCatalog, fitclass.fieldNames, fitclass.fieldProjections,
-             fitclass.fieldEpochs, pmEpoch);
-  
-  //readFields(inputTables, outCatalog, fieldNames, fieldProjections,
-  //           fieldEpochs, pmEpoch);
-  
+  fitclass.fields = Fields::read(inputTables, outCatalog, pmEpoch);
+
   PROGRESS(1,Reading instruments);
 
   // Let's figure out which of our FITS extensions are Instrument or MatchCatalog
@@ -275,7 +265,7 @@ main(int argc, char *argv[])
   vector<int> exposureColorPriorities;
   //fitclass.exposures = readExposures(fitclass.instruments,
   vector<unique_ptr<Exposure>> exposures = readExposures(fitclass.instruments,
-                                     fitclass.fieldEpochs,
+                                     fitclass.fields.epochs(),
                                      exposureColorPriorities,
                                      useColorList,
                                      inputTables, outCatalog, skipExposureList, 
@@ -1161,7 +1151,7 @@ continue;
   // Now loop over all original catalog bintables, reading the desired rows
   // and collecting needed information into the Detection structures
   PROGRESS(1,Reading catalogs);
-  readObjects<Astro>(extensionTable, fitclass.exposures, fitclass.extensions, fitclass.fieldProjections);
+  readObjects<Astro>(extensionTable, fitclass.exposures, fitclass.extensions, fitclass.fields.projections());
   //readObjects<Astro>(extensionTable, fitclass.exposures, extensions, fitclass.fieldProjections);
 
   // Now loop again over all catalogs being used to supply colors,

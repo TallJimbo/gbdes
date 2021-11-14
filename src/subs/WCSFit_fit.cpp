@@ -102,7 +102,7 @@ void FitClass::setRefWCSNames() {
     const Exposure& expo = *exposures[extnptr->exposure];
     if ( expo.instrument >= 0) continue;
     int ifield = expo.field;
-    extnptr->wcsName = fieldNames.nameOf(ifield); // ??? mapName instead???
+    extnptr->wcsName = fields.names().nameOf(ifield); // ??? mapName instead???
   }
 }
 
@@ -187,8 +187,8 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     PROGRESS(2,Checking for field degeneracy);
 
     {
-      vector<bool> fieldHasFree(fieldNames.size(), false);
-      vector<bool> fieldHasFixed(fieldNames.size(), false);
+      vector<bool> fieldHasFree(fields.names().size(), false);
+      vector<bool> fieldHasFixed(fields.names().size(), false);
       cerr << "check 4.31" << endl;
       for (auto const & extnptr : extensions) {
         if (!extnptr) continue; // Not in use
@@ -213,7 +213,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
       for (int i=0; i<fieldHasFree.size(); ++i) {
         if (fieldHasFree[i] && !fieldHasFixed[i]) {
         cerr << "ERROR: No data in field "
-          << fieldNames.nameOf(i)
+          << fields.names().nameOf(i)
           << " have fixed maps to break shift degeneracy"
           << endl;
         done = true;
@@ -281,7 +281,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     // Add WCS for every extension, and reproject into field coordinates
     PROGRESS(2,Defining all WCSs);
     cerr << "check 8 wcs" << endl;
-    setupWCS(fieldProjections, instruments, exposures, extensions, mapCollection);
+    setupWCS(fields.projections(), instruments, exposures, extensions, mapCollection);
     cerr << "check 9 wcs" << endl;
 
     //////////////ADD separate fns here:
@@ -384,7 +384,7 @@ void FitClass::setupMaps(YAMLCollector& inputYAML) {//, PixelMapCollection& mapC
     if (!extnptr) continue;
     if (extnptr->exposure < 0) continue;
     int ifield = exposures[extnptr->exposure]->field;
-    extnptr->startWcs->reprojectTo(*fieldProjections[ifield]);
+    extnptr->startWcs->reprojectTo(*fields.projections()[ifield]);
   }
 }
 
@@ -491,7 +491,7 @@ void FitClass::reprojectWCSs() {
     if (!extnptr) continue;
     if (extnptr->exposure < 0) continue;
     int ifield = exposures[extnptr->exposure]->field;
-    extnptr->startWcs->reprojectTo(*fieldProjections[ifield]);
+    extnptr->startWcs->reprojectTo(*fields.projections()[ifield]);
   }
 }
 
@@ -712,7 +712,7 @@ void FitClass::fit(){
 	if (iExposure<0 || !exposures[iExposure])
 	  continue;
 	int iField = exposures[iExposure]->field;
-	extensionProjections[i] = fieldProjections[iField].get();
+	extensionProjections[i] = fields.projections()[iField].get();
       }
       PROGRESS(2, extensionProjections completed);
       

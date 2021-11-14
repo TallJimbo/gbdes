@@ -73,10 +73,8 @@ class FitClass {
     
 
     // All we care about fields are names and orientations:
-    NameIndex fieldNames;
-    vector<unique_ptr<SphericalCoords>> fieldProjections;
-    vector<double> fieldEpochs;
-    
+    Fields fields;
+  
     vector<unique_ptr<Instrument>> instruments;
     
     // The table of exposures
